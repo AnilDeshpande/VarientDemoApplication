@@ -55,6 +55,10 @@ fun ConfigScreen(){
             Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.Start) {
 
+            if(BuildConfig.DEBUG){
+                AssistChip()
+            }
+
             Text(
                 text = "Varients Demo",
                 style = MaterialTheme.typography.headlineSmall,
@@ -73,6 +77,24 @@ private fun KeyValue(key: String, value: String) {
     Column {
         Text(key, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
         Text(value, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+@Composable
+private fun AssistChip() {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        tonalElevation = 2.dp,
+        shadowElevation = 2.dp,
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Text(
+            text = "DEBUG BUILD",
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
