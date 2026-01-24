@@ -16,17 +16,19 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-
+        manifestPlaceholders ["appLabel"] = "Varients Demo"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         debug {
+            manifestPlaceholders ["appLabel"] = "Varients Demo (dbg)"
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isMinifyEnabled = false
         }
         release {
+            manifestPlaceholders ["appLabel"] = "Varients Demo"
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
