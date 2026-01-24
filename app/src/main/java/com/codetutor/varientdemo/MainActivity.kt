@@ -1,13 +1,17 @@
 package com.codetutor.varientdemo
 
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -15,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -69,6 +74,19 @@ fun ConfigScreen(){
             KeyValue("VERSION_NAME", BuildConfig.VERSION_NAME ?: "—")
             KeyValue("DEBUG flag", BuildConfig.DEBUG.toString())
             KeyValue("BASE_URL", BuildConfig.BASE_URL)
+
+            if (BuildConfig.DEBUG) {
+                val activity = LocalContext.current as Activity
+                Spacer(Modifier.height(8.dp))
+                Button (onClick = { ActivityLeaker.leak(activity = activity) }) {
+                    Text("Trigger Activity Leak")
+                }
+                Text(
+                    "Tap the button, then leave this screen (Back). LeakCanary will report a leaked Activity.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
         }
     }
 }
