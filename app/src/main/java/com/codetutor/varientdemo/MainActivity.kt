@@ -68,6 +68,7 @@ fun ConfigScreen(){
             KeyValue("APPLICATION_ID", BuildConfig.APPLICATION_ID)
             KeyValue("VERSION_NAME", BuildConfig.VERSION_NAME ?: "—")
             KeyValue("DEBUG flag", BuildConfig.DEBUG.toString())
+            KeyValue("BASE_URL", BuildConfig.BASE_URL)
         }
     }
 }
