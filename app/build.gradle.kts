@@ -6,11 +6,9 @@ plugins {
 
 android {
     namespace = "com.codetutor.varientdemo"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
-    flavorDimensions+="env"
+    flavorDimensions += "env"
 
     defaultConfig {
         applicationId = "com.codetutor.varientdemo"
@@ -18,7 +16,6 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-        manifestPlaceholders ["appLabel"] = "Varients Demo"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -33,14 +30,11 @@ android {
 
     buildTypes {
         debug {
-            //manifestPlaceholders ["appLabel"] = "Varients Demo (dbg)"
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isMinifyEnabled = false
-
         }
         release {
-            //manifestPlaceholders ["appLabel"] = "Varients Demo"
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("debug")
 
@@ -103,5 +97,30 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation("com.squareup.leakcanary:leakcanary-android:2.14")
-
 }
+
+// Configure app label dynamically for each variant using Android Components API (AGP 8+)
+androidComponents {
+    onVariants { variant ->
+        // Get the flavor name from the "env" dimension (qa, staging, prod)
+        val env = variant.productFlavors
+            .firstOrNull { it.first == "env" }
+            ?.second ?: variant.flavorName ?: "unknown"
+
+        val base = "Variants Demo"
+        val buildType = variant.buildType // "debug" or "release"
+
+        // Compute the label based on build type
+        val label = when (buildType) {
+            "debug" -> "$base ($env dbg)"
+            else -> "$base ($env)"
+        }
+
+        // Set the manifest placeholder for this specific variant
+        variant.manifestPlaceholders.put("appLabel", label)
+
+        // Debug output to verify labels are set correctly
+        println("✅ Variant ${variant.name}: appLabel = '$label'")
+    }
+}
+
