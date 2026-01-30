@@ -110,9 +110,13 @@ androidComponents {
         val base = "Variants Demo"
         val buildType = variant.buildType // "debug" or "release"
 
-        // Compute the label based on build type
-        val label = when (buildType) {
-            "debug" -> "$base ($env dbg)"
+        // Compute the label based on flavor and build type
+        val label = when {
+            // For prod flavor
+            env == "prod" && buildType == "debug" -> "$base ($env dbg)"
+            env == "prod" && buildType == "release" -> base // Just "Variants Demo"
+            // For qa and staging flavors
+            buildType == "debug" -> "$base ($env dbg)"
             else -> "$base ($env)"
         }
 
