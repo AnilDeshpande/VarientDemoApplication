@@ -20,6 +20,15 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    sourceSets {
+        getByName("debug") {
+            java.srcDirs("src/debug/java")
+        }
+        getByName("release") {
+            java.srcDirs("src/release/java")
+        }
+    }
+
     buildTypes {
         debug {
             manifestPlaceholders ["appLabel"] = "Varients Demo (dbg)"
