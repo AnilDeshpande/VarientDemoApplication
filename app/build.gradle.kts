@@ -10,6 +10,8 @@ android {
         version = release(36)
     }
 
+    flavorDimensions+="env"
+
     defaultConfig {
         applicationId = "com.codetutor.varientdemo"
         minSdk = 24
@@ -35,19 +37,42 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isMinifyEnabled = false
-            buildConfigField("String","BASE_URL","\"https://staging.api.example.com\"")
+
         }
         release {
             manifestPlaceholders ["appLabel"] = "Varients Demo"
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("debug")
-            buildConfigField("String", "BASE_URL", "\"https://api.example.com\"")
+
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
     }
+
+    productFlavors {
+
+        create("qa"){
+            dimension="env"
+            applicationIdSuffix=".qa"
+            versionNameSuffix="-qa"
+            buildConfigField("String","BASE_URL","\"https://qa.api.example.com\"")
+        }
+
+        create("staging"){
+            dimension="env"
+            applicationIdSuffix=".staging"
+            versionNameSuffix="-staging"
+            buildConfigField("String","BASE_URL","\"https://staging.api.example.com\"")
+        }
+
+        create("prod"){
+            dimension="env"
+            buildConfigField("String", "BASE_URL", "\"https://api.example.com\"")
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
