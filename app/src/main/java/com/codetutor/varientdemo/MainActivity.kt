@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.codetutor.varientdemo.diagnostics.DiagnosticsProvider
 import com.codetutor.varientdemo.ui.theme.VarientDemoApplicationTheme
 
 
@@ -76,17 +77,34 @@ fun ConfigScreen(){
             KeyValue("DEBUG flag", BuildConfig.DEBUG.toString())
             KeyValue("BASE_URL", BuildConfig.BASE_URL)
 
-            if(BuildConfig.DEBUG){
-                val activity = LocalContext.current as Activity
-                Spacer(Modifier.height(8.dp))
-                Button (onClick = { ActivityLeaker.leak(activity = activity as MainActivity) }) {
-                    Text("Trigger Activity Leak")
-                }
-                Text("Tap the button, then leave this screen (Back). LeakCanary will report a leaked Activity.",
-                    style = MaterialTheme.typography.bodySmall)
-            }
+            if(BuildConfig.DEBUG) DebugBanner()
+            Text("Diagnostics", style = MaterialTheme.typography.titleMedium)
+            DiagnosticsCard()
         }
     }
+}
+
+@Composable
+private fun DiagnosticsCard(){
+    val info = DiagnosticsProvider.get().info()
+    Surface(tonalElevation = 1.dp, shape = MaterialTheme.shapes.medium) {
+        Text(
+            text = info,
+            modifier = Modifier.padding(16.dp),
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+}
+
+@Composable
+private fun DebugBanner(){
+    val activity = LocalContext.current as Activity
+    Spacer(Modifier.height(8.dp))
+    Button (onClick = { ActivityLeaker.leak(activity = activity as MainActivity) }) {
+        Text("Trigger Activity Leak")
+    }
+    Text("Tap the button, then leave this screen (Back). LeakCanary will report a leaked Activity.",
+        style = MaterialTheme.typography.bodySmall)
 }
 
 @Composable
