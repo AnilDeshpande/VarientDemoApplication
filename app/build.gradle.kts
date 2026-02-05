@@ -18,7 +18,6 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-        manifestPlaceholders ["appLabel"] = "Varients Demo"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -107,6 +106,22 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+
+androidComponents {
+    onVariants { v ->
+        val env = v.productFlavors.find { it.first == "env" }?.second ?: v.flavorName
+        val tier = v.productFlavors.find { it.first == "tier" }?.second ?: ""
+        val base = "VarientDemoApp"
+        val dbg = if (v.buildType == "debug") " dbg" else ""
+
+        val label = when (env) {
+            "prod" -> "$base ($tier)$dbg"
+            else -> "$base ($env-$tier)$dbg"
+        }
+        v.manifestPlaceholders.put("appLabel", label)
     }
 }
 
