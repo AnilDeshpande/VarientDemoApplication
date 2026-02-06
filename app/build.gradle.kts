@@ -1,3 +1,5 @@
+import com.android.build.api.variant.AndroidComponentsExtension
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -133,3 +135,37 @@ dependencies {
 
 
 }
+
+// Configure which variants to build (avoid variant explosion)
+extensions.configure<AndroidComponentsExtension<*, *, *>>("androidComponents") {
+    beforeVariants { variantBuilder ->
+        val flavors = variantBuilder.productFlavors.toMap()
+        val env = flavors["env"]
+        val tier = flavors["tier"]
+        val buildType = variantBuilder.buildType
+
+        // Define which combinations to KEEP (all others will be disabled)
+        val allowedVariants = setOf(
+            // QA - only Debug builds
+            Triple("qa", "free", "debug"),
+            Triple("qa", "paid", "debug"),
+
+            // Staging - both Debug and Release
+            Triple("staging", "free", "debug"),
+            Triple("staging", "paid", "debug"),
+            Triple("staging", "free", "release"),
+            Triple("staging", "paid", "release"),
+
+            // Prod - only Release builds
+            Triple("prod", "free", "release"),
+            Triple("prod", "paid", "release")
+        )
+
+        // Disable variant if not in allowed list
+        val currentVariant = Triple(env, tier, buildType)
+        if (currentVariant !in allowedVariants) {
+            variantBuilder.enable = false
+        }
+    }
+}
+
