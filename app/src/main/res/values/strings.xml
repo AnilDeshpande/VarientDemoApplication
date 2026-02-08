@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">VariantDemoApplication</string>
+    <!-- This is the fallback app name - flavors should override this -->
+    <string name="app_name">VariantDemoApp</string>
 </resources>
