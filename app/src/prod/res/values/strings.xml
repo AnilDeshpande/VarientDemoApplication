@@ -1,4 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- This is the fallback app name - flavors should override this -->
     <string name="app_name">VariantDemoApp</string>
 </resources>

@@ -33,14 +33,14 @@ android {
 
     buildTypes {
         debug {
-            manifestPlaceholders ["appLabel"] = "Varients Demo (dbg)"
+            //manifestPlaceholders ["appLabel"] = "Varients Demo (dbg)"
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isMinifyEnabled = false
 
         }
         release {
-            manifestPlaceholders ["appLabel"] = "Varients Demo"
+            //manifestPlaceholders ["appLabel"] = "Varients Demo"
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("debug")
 
