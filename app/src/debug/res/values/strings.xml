@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">VariantDemo [DEBUG]</string>
+    <!-- Debug-specific strings go here -->
+    <!-- Do NOT override app_name here - let the product flavors define it -->
 </resources>
