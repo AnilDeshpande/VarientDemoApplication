@@ -32,14 +32,14 @@ android {
     buildTypes {
 
         debug {
-            manifestPlaceholders ["appLabel"] = "Varient Demo (dbg)"
+            //manifestPlaceholders ["appLabel"] = "Varient Demo (dbg)"
             applicationIdSuffix=".debug"
             versionNameSuffix="-debug"
             isMinifyEnabled = false
         }
 
         release {
-            manifestPlaceholders ["appLabel"] = "Varient Demo"
+            //manifestPlaceholders ["appLabel"] = "Varient Demo"
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
