@@ -1,3 +1,5 @@
+import com.android.build.api.variant.AndroidComponentsExtension
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -124,4 +126,38 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation("com.squareup.leakcanary:leakcanary-android:2.14")
     "freeImplementation"(project(":ads"))
+}
+
+extensions.configure<AndroidComponentsExtension<*, *, *>>("androidComponents") {
+    beforeVariants { variantBuilder ->
+        val flavors = variantBuilder.productFlavors.toMap()
+        val env = flavors["env"]
+        val tier = flavors["tier"]
+        val buildType = variantBuilder.buildType
+
+        //Fine the combinations to keep
+
+        val allowedVariants = setOf(
+            //QA - Only Debug builds
+            Triple("qa", "free", "debug"),
+            Triple("qa", "paid", "debug"),
+
+            //Staging - both Debug and Release
+            Triple("staging", "free", "debug"),
+            Triple("staging", "paid", "debug"),
+            //Triple("staging", "free", "release"),
+            //Triple("staging", "paid", "release"),
+
+            //Prod - Only release builds
+            Triple("prod", "free", "release"),
+            Triple("prod", "paid", "release")
+        )
+
+        //Disable variants if not allowed in the allowedVariants list
+        val currentVariant = Triple(env, tier,buildType)
+        if(currentVariant !in allowedVariants) {
+            variantBuilder.enable = false
+        }
+
+    }
 }
