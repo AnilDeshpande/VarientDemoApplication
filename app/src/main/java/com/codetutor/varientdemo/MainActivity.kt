@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.codetutor.varientdemo.adsui.AdsUiProvider
 import com.codetutor.varientdemo.diagnostics.DiagnosticsProvider
 import com.codetutor.varientdemo.ui.theme.VarientDemoApplicationTheme
 
@@ -114,11 +115,7 @@ fun ConfigScreen(modifier: Modifier = Modifier){
             //KeyValue("TIER_NAME", BuildConfig.TIER_NAME)
             KeyValue("SHOW_ADS", BuildConfig.SHOW_ADS.toString())
 
-            if (BuildConfig.SHOW_ADS) {
-                Surface(tonalElevation = 2.dp) {
-                    Text("[Ad placeholder] — visible in FREE", Modifier.padding(12.dp))
-                }
-            }
+            AdsUiProvider.get().Banner(modifier)
 
             if (BuildConfig.DEBUG) DebugBanner()
             Text("Diagnostics", style = MaterialTheme.typography.titleMedium)

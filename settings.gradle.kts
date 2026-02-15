@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "VarientDemoApplication"
 include(":app")
+include(":ads")
