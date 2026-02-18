@@ -10,7 +10,7 @@ android {
         version = release(36)
     }
 
-    flavorDimensions+="env"
+    flavorDimensions+=listOf("env","tier")
 
     defaultConfig {
         applicationId = "com.codetutor.varientdemo"
@@ -70,6 +70,30 @@ android {
         create("prod"){
             dimension="env"
             buildConfigField("String", "BASE_URL", "\"https://api.example.com\"")
+        }
+
+        create("free") {
+            dimension="tier"
+            applicationIdSuffix = ".free"          // optional but recommended
+            versionNameSuffix = "-free"           // optional
+            buildConfigField("Boolean", "IS_PAID", "false")
+        }
+
+        create("paid") {
+            dimension = "tier"
+            applicationIdSuffix = ".paid"          // optional
+            versionNameSuffix = "-paid"            // optional
+            buildConfigField("Boolean", "IS_PAID", "true")
+        }
+
+        getByName("free"){
+            buildConfigField("String", "TIER_NAME", "\"free\"")
+            buildConfigField("boolean", "SHOW_ADS", "true")
+        }
+
+        getByName("paid"){
+            buildConfigField("String", "TIER_NAME", "\"paid\"")
+            buildConfigField("boolean", "SHOW_ADS", "false")
         }
     }
 
