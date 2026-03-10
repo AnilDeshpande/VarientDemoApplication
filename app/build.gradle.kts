@@ -1,5 +1,3 @@
-import com.android.build.api.variant.AndroidComponentsExtension
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -128,6 +126,7 @@ dependencies {
     "freeImplementation"(project(":ads"))
 }
 
+/*
 extensions.configure<AndroidComponentsExtension<*, *, *>>("androidComponents") {
     beforeVariants { variantBuilder ->
         val flavors = variantBuilder.productFlavors.toMap()
@@ -160,4 +159,4 @@ extensions.configure<AndroidComponentsExtension<*, *, *>>("androidComponents") {
         }
 
     }
-}
+}*/
