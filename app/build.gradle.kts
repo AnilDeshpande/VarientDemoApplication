@@ -156,6 +156,18 @@ android {
     }
 }
 
+// Release builds are end-user facing — strip all flavor/buildType suffixes from versionName.
+// Debug builds keep their suffixes (e.g. "1.2.2-qa-debug") for easy identification.
+androidComponents {
+    onVariants { variant ->
+        if (variant.buildType == "release") {
+            variant.outputs.forEach { output ->
+                output.versionName.set(versionNameFromGit)
+            }
+        }
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
