@@ -104,6 +104,7 @@ fun ConfigScreen(modifier: Modifier = Modifier){
             )
 
             KeyValue("APPLICATION_ID", BuildConfig.APPLICATION_ID)
+            KeyValue("VERSION_CODE", BuildConfig.VERSION_CODE.toString())
             KeyValue("VERSION_NAME", BuildConfig.VERSION_NAME ?: "—")
             KeyValue("DEBUG flag", BuildConfig.DEBUG.toString())
 
