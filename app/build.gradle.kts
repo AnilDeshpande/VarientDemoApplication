@@ -156,13 +156,13 @@ android {
     }
 }
 
-// Release builds are end-user facing — strip all flavor/buildType suffixes from versionName.
-// Debug builds keep their suffixes (e.g. "1.2.2-qa-debug") for easy identification.
+// Release builds are end-user facing — use clean semantic version without Git metadata or flavor suffixes.
+// Debug builds keep Git metadata and suffixes (e.g. "1.2.2+5.a3b4c5d-qa-free-debug") for traceability.
 androidComponents {
     onVariants { variant ->
         if (variant.buildType == "release") {
             variant.outputs.forEach { output ->
-                output.versionName.set(versionNameFromGit)
+                output.versionName.set(baseVersionName)  // Clean version like "1.2.2"
             }
         }
     }
