@@ -156,6 +156,16 @@ android {
     }
 }
 
+androidComponents {
+    onVariants { variant ->
+        if(variant.buildType == "release") {
+            variant.outputs.forEach { output ->
+                output.versionName.set(baseVersionName)
+            }
+        }
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
