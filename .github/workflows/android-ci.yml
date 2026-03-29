@@ -4,9 +4,13 @@
 #
 # Secret injection follows the same classification as build.gradle.kts:
 #   COMMON            → ANALYTICS_SDK_KEY (always injected)
-#   ENVIRONMENT-SPECIFIC → BACKEND_TOKEN_<ENV> (derived from variant)
-#   TIER-SPECIFIC     → AD_SDK_KEY_<TIER> (derived from variant)
+#   ENVIRONMENT-SPECIFIC → BACKEND_TOKEN_<ENV> (all three, always)
+#   TIER-SPECIFIC     → AD_SDK_KEY_<TIER> (both, always)
 #   RELEASE-ONLY      → RELEASE_SIGNING_* (only when buildType=release)
+#
+# ⚠️  IMPORTANT: Gradle evaluates ALL productFlavors at configuration time,
+#     so all common/env/tier secrets must be present for every build.
+#     Only signing secrets are truly conditional (use resolveSecretOrNull).
 #
 # No giant if-else. The variant name encodes the env, tier, and buildType.
 
