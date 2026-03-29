@@ -99,6 +99,31 @@ android {
         }
     }
 
+    // ❌ THE NAÏVE APPROACH — DO NOT DO THIS
+    // If you create one secret per variant you end up with:
+    //
+    //   BACKEND_TOKEN_QA_FREE_DEBUG    = "..."
+    //   BACKEND_TOKEN_QA_FREE_RELEASE  = "..."
+    //   BACKEND_TOKEN_QA_PAID_DEBUG    = "..."
+    //   BACKEND_TOKEN_QA_PAID_RELEASE  = "..."
+    //   BACKEND_TOKEN_STAGING_FREE_DEBUG   = "..."
+    //   BACKEND_TOKEN_STAGING_FREE_RELEASE = "..."
+    //   BACKEND_TOKEN_STAGING_PAID_DEBUG   = "..."
+    //   BACKEND_TOKEN_STAGING_PAID_RELEASE = "..."
+    //   BACKEND_TOKEN_PROD_FREE_DEBUG  = "..."
+    //   BACKEND_TOKEN_PROD_FREE_RELEASE= "..."
+    //   BACKEND_TOKEN_PROD_PAID_DEBUG  = "..."
+    //   BACKEND_TOKEN_PROD_PAID_RELEASE= "..."
+    //
+    // That's 12 secrets — just for ONE key. Now multiply by every secret
+    // your app needs (ad SDK key, analytics key, signing creds…).
+    // The workflow YAML becomes a giant if-else matrix. Copy-paste Gradle logic
+    // everywhere. It collapses fast — not because it's technically wrong,
+    // but because no one on the team can maintain it six months later.
+    //
+    // The real question: what ACTUALLY needs to vary, and what can stay common?
+    // ────────────────────────────────────────────────────────────────────────
+
     productFlavors {
         create("qa"){
             dimension="env"
