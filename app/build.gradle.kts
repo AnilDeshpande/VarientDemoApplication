@@ -56,15 +56,19 @@ val versionCodeFromGit = baseVersionCode + commitsSinceTag
 
 // ── Secret resolution ──────────────────────────────────────────────────────
 // Two-tier lookup: env var (CI) → local.properties (local dev) → fail-fast error.
-// This single helper is used by every secret in the build.
+// Blank env vars (e.g. '') are treated as absent — CI intentionally sets
+// release-only vars to '' for debug builds.
 val localProps = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.exists()) load(file.inputStream())
 }
 
+fun resolveSecretOrNull(name: String): String? =
+    System.getenv(name)?.takeIf { it.isNotBlank() }
+        ?: localProps.getProperty(name)?.takeIf { it.isNotBlank() }
+
 fun resolveSecret(name: String): String =
-    System.getenv(name)
-        ?: localProps.getProperty(name)
+    resolveSecretOrNull(name)
         ?: error("Missing secret: $name — add it to local.properties or set it as an env var.")
 
 android {
@@ -96,14 +100,20 @@ android {
     }
 
     // ── RELEASE-ONLY signing config ───────────────────────────────────────
-    // These secrets are resolved ONLY for release builds. Debug builds use
-    // the auto-generated debug keystore — no signing secrets needed.
+    // This block runs at Gradle CONFIGURATION time for ALL variants.
+    // For debug builds (locally or on CI) the signing secrets may be absent,
+    // so we use resolveSecretOrNull and skip configuration when missing.
+    // For release builds the secrets MUST be present — the release buildType
+    // references this config, and Gradle will fail at signing time if empty.
     signingConfigs {
         create("release") {
-            storeFile = file(resolveSecret("RELEASE_SIGNING_STORE_FILE"))
-            storePassword = resolveSecret("RELEASE_SIGNING_STORE_PASSWORD")
-            keyAlias = resolveSecret("RELEASE_SIGNING_KEY_ALIAS")
-            keyPassword = resolveSecret("RELEASE_SIGNING_KEY_PASSWORD")
+            val storeFilePath = resolveSecretOrNull("RELEASE_SIGNING_STORE_FILE")
+            if (storeFilePath != null) {
+                storeFile = file(storeFilePath)
+                storePassword = resolveSecretOrNull("RELEASE_SIGNING_STORE_PASSWORD") ?: ""
+                keyAlias = resolveSecretOrNull("RELEASE_SIGNING_KEY_ALIAS") ?: ""
+                keyPassword = resolveSecretOrNull("RELEASE_SIGNING_KEY_PASSWORD") ?: ""
+            }
         }
     }
 
