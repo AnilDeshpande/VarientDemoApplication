@@ -55,3 +55,20 @@ From 48 → 7. Same app, same security, dramatically less maintenance.
 > Only genuinely varying values are split.
 > Release-only values are resolved only when the build type requires them.
 
+## ⚠️ Gradle Configuration-Time Gotcha
+
+The classification above reduces the **total number of secrets you maintain**
+(7 instead of 48). However, on CI you must still provide all common,
+environment-specific, and tier-specific secrets for every build — because
+Gradle evaluates **all** `productFlavors` blocks at configuration time,
+regardless of which variant is being built.
+
+Only **release-only** secrets (signing) can be truly conditional, because
+those use `resolveSecretOrNull` and gracefully skip when absent.
+
+| What the classification saves | What it does NOT save |
+|-------------------------------|----------------------|
+| Number of GitHub Secrets to create and rotate | Number of env vars passed per CI run |
+| Naming complexity (clear axis-based names) | Gradle configuration-time evaluation |
+| Workflow YAML size (no 12-way if-else) | The need for all flavor secrets at build time |
+
