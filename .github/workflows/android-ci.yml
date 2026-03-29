@@ -91,16 +91,20 @@ jobs:
           # ── COMMON (always) ──────────────────────────────────────
           ANALYTICS_SDK_KEY: ${{ secrets.ANALYTICS_SDK_KEY }}
 
-          # ── ENVIRONMENT-SPECIFIC (one of three) ──────────────────
-          BACKEND_TOKEN_QA:      ${{ steps.classify.outputs.env == 'QA'      && secrets.BACKEND_TOKEN_QA      || '' }}
-          BACKEND_TOKEN_STAGING: ${{ steps.classify.outputs.env == 'STAGING' && secrets.BACKEND_TOKEN_STAGING || '' }}
-          BACKEND_TOKEN_PROD:    ${{ steps.classify.outputs.env == 'PROD'    && secrets.BACKEND_TOKEN_PROD    || '' }}
+          # ── ENVIRONMENT-SPECIFIC (all three — Gradle configures ──
+          # every flavor at configuration time, regardless of which
+          # variant you're building)
+          BACKEND_TOKEN_QA:      ${{ secrets.BACKEND_TOKEN_QA }}
+          BACKEND_TOKEN_STAGING: ${{ secrets.BACKEND_TOKEN_STAGING }}
+          BACKEND_TOKEN_PROD:    ${{ secrets.BACKEND_TOKEN_PROD }}
 
-          # ── TIER-SPECIFIC (one of two) ───────────────────────────
-          AD_SDK_KEY_FREE: ${{ steps.classify.outputs.tier == 'FREE' && secrets.AD_SDK_KEY_FREE || '' }}
-          AD_SDK_KEY_PAID: ${{ steps.classify.outputs.tier == 'PAID' && secrets.AD_SDK_KEY_PAID || '' }}
+          # ── TIER-SPECIFIC (both — same reason as above) ──────────
+          AD_SDK_KEY_FREE: ${{ secrets.AD_SDK_KEY_FREE }}
+          AD_SDK_KEY_PAID: ${{ secrets.AD_SDK_KEY_PAID }}
 
           # ── RELEASE-ONLY (signing — only when buildType=release) ─
+          # These are the one category that IS truly conditional:
+          # signingConfigs uses resolveSecretOrNull, so empty is OK.
           RELEASE_SIGNING_STORE_FILE:     ${{ steps.classify.outputs.buildType == 'release' && secrets.RELEASE_SIGNING_STORE_FILE     || '' }}
           RELEASE_SIGNING_STORE_PASSWORD: ${{ steps.classify.outputs.buildType == 'release' && secrets.RELEASE_SIGNING_STORE_PASSWORD || '' }}
           RELEASE_SIGNING_KEY_ALIAS:      ${{ steps.classify.outputs.buildType == 'release' && secrets.RELEASE_SIGNING_KEY_ALIAS      || '' }}
