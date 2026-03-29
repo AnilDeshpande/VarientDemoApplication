@@ -1,0 +1,54 @@
+# ── Android CI — Scalable Secret Strategy ─────────────────────────────
+# This workflow builds a single variant at a time.
+# Select the variant and branch from the GitHub Actions UI.
+#
+# ⚠️  STAGE F: No secrets are injected yet — the build WILL FAIL
+#     on CI because local.properties doesn't exist on the runner.
+#     This proves the fail-fast error from resolveSecret() works.
+
+name: Android CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: 'Variant to build'
+        required: true
+        type: choice
+        options:
+          - qaFreeDebug
+          - qaPaidDebug
+          - stagingFreeDebug
+          - stagingPaidDebug
+          - prodFreeRelease
+          - prodPaidRelease
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Build variant
+        run: |
+          chmod +x ./gradlew
+          # Capitalize first letter of the variant name for the Gradle task
+          VARIANT="${{ inputs.variant }}"
+          TASK_NAME="assemble${VARIANT^}"
+          echo "Building: ./gradlew $TASK_NAME"
+          ./gradlew "$TASK_NAME"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ inputs.variant }}-apk
+          path: app/build/outputs/apk/**/*.apk
+
