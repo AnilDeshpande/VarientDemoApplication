@@ -2,9 +2,13 @@
 # This workflow builds a single variant at a time.
 # Select the variant and branch from the GitHub Actions UI.
 #
-# ⚠️  STAGE F: No secrets are injected yet — the build WILL FAIL
-#     on CI because local.properties doesn't exist on the runner.
-#     This proves the fail-fast error from resolveSecret() works.
+# Secret injection follows the same classification as build.gradle.kts:
+#   COMMON            → ANALYTICS_SDK_KEY (always injected)
+#   ENVIRONMENT-SPECIFIC → BACKEND_TOKEN_<ENV> (derived from variant)
+#   TIER-SPECIFIC     → AD_SDK_KEY_<TIER> (derived from variant)
+#   RELEASE-ONLY      → RELEASE_SIGNING_* (only when buildType=release)
+#
+# No giant if-else. The variant name encodes the env, tier, and buildType.
 
 name: Android CI
 
@@ -31,6 +35,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - name: Derive env, tier, and buildType from variant name
+        id: classify
+        run: |
+          VARIANT="${{ inputs.variant }}"
+          echo "variant=$VARIANT"
+
+          # Extract environment (first segment: qa, staging, or prod)
+          if [[ "$VARIANT" == qa* ]]; then
+            ENV="QA"
+          elif [[ "$VARIANT" == staging* ]]; then
+            ENV="STAGING"
+          elif [[ "$VARIANT" == prod* ]]; then
+            ENV="PROD"
+          fi
+
+          # Extract tier (middle segment: Free or Paid)
+          if [[ "$VARIANT" == *Free* ]]; then
+            TIER="FREE"
+          elif [[ "$VARIANT" == *Paid* ]]; then
+            TIER="PAID"
+          fi
+
+          # Extract build type (last segment: Debug or Release)
+          if [[ "$VARIANT" == *Debug ]]; then
+            BUILD_TYPE="debug"
+          elif [[ "$VARIANT" == *Release ]]; then
+            BUILD_TYPE="release"
+          fi
+
+          echo "env=$ENV"       >> "$GITHUB_OUTPUT"
+          echo "tier=$TIER"     >> "$GITHUB_OUTPUT"
+          echo "buildType=$BUILD_TYPE" >> "$GITHUB_OUTPUT"
+
+          echo "── Classification ──"
+          echo "  Environment : $ENV"
+          echo "  Tier        : $TIER"
+          echo "  Build Type  : $BUILD_TYPE"
+
       - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
@@ -38,12 +80,30 @@ jobs:
           java-version: '21'
 
       - name: Build variant
+        env:
+          # ── COMMON (always) ──────────────────────────────────────
+          ANALYTICS_SDK_KEY: ${{ secrets.ANALYTICS_SDK_KEY }}
+
+          # ── ENVIRONMENT-SPECIFIC (one of three) ──────────────────
+          BACKEND_TOKEN_QA:      ${{ steps.classify.outputs.env == 'QA'      && secrets.BACKEND_TOKEN_QA      || '' }}
+          BACKEND_TOKEN_STAGING: ${{ steps.classify.outputs.env == 'STAGING' && secrets.BACKEND_TOKEN_STAGING || '' }}
+          BACKEND_TOKEN_PROD:    ${{ steps.classify.outputs.env == 'PROD'    && secrets.BACKEND_TOKEN_PROD    || '' }}
+
+          # ── TIER-SPECIFIC (one of two) ───────────────────────────
+          AD_SDK_KEY_FREE: ${{ steps.classify.outputs.tier == 'FREE' && secrets.AD_SDK_KEY_FREE || '' }}
+          AD_SDK_KEY_PAID: ${{ steps.classify.outputs.tier == 'PAID' && secrets.AD_SDK_KEY_PAID || '' }}
+
+          # ── RELEASE-ONLY (signing — only when buildType=release) ─
+          RELEASE_SIGNING_STORE_FILE:     ${{ steps.classify.outputs.buildType == 'release' && secrets.RELEASE_SIGNING_STORE_FILE     || '' }}
+          RELEASE_SIGNING_STORE_PASSWORD: ${{ steps.classify.outputs.buildType == 'release' && secrets.RELEASE_SIGNING_STORE_PASSWORD || '' }}
+          RELEASE_SIGNING_KEY_ALIAS:      ${{ steps.classify.outputs.buildType == 'release' && secrets.RELEASE_SIGNING_KEY_ALIAS      || '' }}
+          RELEASE_SIGNING_KEY_PASSWORD:   ${{ steps.classify.outputs.buildType == 'release' && secrets.RELEASE_SIGNING_KEY_PASSWORD   || '' }}
         run: |
           chmod +x ./gradlew
-          # Capitalize first letter of the variant name for the Gradle task
           VARIANT="${{ inputs.variant }}"
           TASK_NAME="assemble${VARIANT^}"
           echo "Building: ./gradlew $TASK_NAME"
+          echo "  Secrets injected for: env=${{ steps.classify.outputs.env }}, tier=${{ steps.classify.outputs.tier }}, buildType=${{ steps.classify.outputs.buildType }}"
           ./gradlew "$TASK_NAME"
 
       - name: Upload APK
@@ -51,4 +111,6 @@ jobs:
         with:
           name: ${{ inputs.variant }}-apk
           path: app/build/outputs/apk/**/*.apk
+
+
 
