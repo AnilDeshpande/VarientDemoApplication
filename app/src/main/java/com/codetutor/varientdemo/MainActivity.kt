@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -16,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -118,6 +120,26 @@ fun ConfigScreen(modifier: Modifier = Modifier){
 
             AdsUiProvider.get().Banner(modifier)
 
+            // ── Secrets (classified) ───────────────────────────────
+            HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp))
+            Text(
+                "Secrets (classified)",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            SecretKeyValue("ANALYTICS_SDK_KEY", BuildConfig.ANALYTICS_SDK_KEY, "Common")
+            SecretKeyValue("BACKEND_TOKEN", BuildConfig.BACKEND_TOKEN, "Environment-specific")
+            SecretKeyValue("AD_SDK_KEY", BuildConfig.AD_SDK_KEY, "Tier-specific")
+
+            if (BuildConfig.DEBUG) {
+                KeyValue("Signing secrets", "Not needed for debug builds")
+            } else {
+                KeyValue("Signing configured", "✅ Release signing active")
+            }
+
+            HorizontalDivider(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp))
+
             if (BuildConfig.DEBUG) DebugBanner()
             Text("Diagnostics", style = MaterialTheme.typography.titleMedium)
             DiagnosticsCard()
@@ -131,6 +153,27 @@ private fun KeyValue(key: String, value: String) {
     Column {
         Text(key, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
         Text(value, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+/** Show first 3 and last 3 chars, mask the rest with bullets. */
+private fun maskSecret(secret: String): String {
+    if (secret.length <= 8) return "••••••"
+    val prefix = secret.take(3)
+    val suffix = secret.takeLast(3)
+    return "$prefix${"•".repeat(secret.length - 6)}$suffix"
+}
+
+@Composable
+private fun SecretKeyValue(key: String, secret: String, classification: String) {
+    Column {
+        Text(key, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+        Text(maskSecret(secret), style = MaterialTheme.typography.bodyLarge)
+        Text(
+            classification,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.tertiary
+        )
     }
 }
 
