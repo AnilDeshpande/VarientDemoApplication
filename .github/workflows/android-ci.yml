@@ -1,6 +1,6 @@
 # ── Android CI — Scalable Secret Strategy ─────────────────────────────
-# This workflow builds a single variant at a time.
-# Select the variant and branch from the GitHub Actions UI.
+# This workflow lives on `main` (so GitHub discovers it in the Actions tab)
+# but checks out whichever branch you specify in the inputs.
 #
 # Secret injection follows the same classification as build.gradle.kts:
 #   COMMON            → ANALYTICS_SDK_KEY (always injected)
@@ -15,6 +15,11 @@ name: Android CI
 on:
   workflow_dispatch:
     inputs:
+      branch:
+        description: 'Branch to build from'
+        required: true
+        type: string
+        default: 'secrets-demo-video-three'
       variant:
         description: 'Variant to build'
         required: true
@@ -34,6 +39,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.branch }}
 
       - name: Derive env, tier, and buildType from variant name
         id: classify
