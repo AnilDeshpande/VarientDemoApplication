@@ -1,0 +1,131 @@
+# ── Android CI — Scalable Secret Strategy ─────────────────────────────
+# This workflow lives on `main` (so GitHub discovers it in the Actions tab)
+# but checks out whichever branch you specify in the inputs.
+#
+# Secret injection follows the same classification as build.gradle.kts:
+#   COMMON            → ANALYTICS_SDK_KEY (always injected)
+#   ENVIRONMENT-SPECIFIC → BACKEND_TOKEN_<ENV> (all three, always)
+#   TIER-SPECIFIC     → AD_SDK_KEY_<TIER> (both, always)
+#   RELEASE-ONLY      → RELEASE_SIGNING_* (only when buildType=release)
+#
+# ⚠️  IMPORTANT: Gradle evaluates ALL productFlavors at configuration time,
+#     so all common/env/tier secrets must be present for every build.
+#     Only signing secrets are truly conditional (use resolveSecretOrNull).
+#
+# No giant if-else. The variant name encodes the env, tier, and buildType.
+
+name: Android CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build from'
+        required: true
+        type: string
+        default: 'secrets-demo-video-three'
+      variant:
+        description: 'Variant to build'
+        required: true
+        type: choice
+        options:
+          - qaFreeDebug
+          - qaPaidDebug
+          - stagingFreeDebug
+          - stagingPaidDebug
+          - prodFreeRelease
+          - prodPaidRelease
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Derive env, tier, and buildType from variant name
+        id: classify
+        run: |
+          VARIANT="${{ inputs.variant }}"
+          echo "variant=$VARIANT"
+
+          # Extract environment (first segment: qa, staging, or prod)
+          if [[ "$VARIANT" == qa* ]]; then
+            ENV="QA"
+          elif [[ "$VARIANT" == staging* ]]; then
+            ENV="STAGING"
+          elif [[ "$VARIANT" == prod* ]]; then
+            ENV="PROD"
+          fi
+
+          # Extract tier (middle segment: Free or Paid)
+          if [[ "$VARIANT" == *Free* ]]; then
+            TIER="FREE"
+          elif [[ "$VARIANT" == *Paid* ]]; then
+            TIER="PAID"
+          fi
+
+          # Extract build type (last segment: Debug or Release)
+          if [[ "$VARIANT" == *Debug ]]; then
+            BUILD_TYPE="debug"
+          elif [[ "$VARIANT" == *Release ]]; then
+            BUILD_TYPE="release"
+          fi
+
+          echo "env=$ENV"       >> "$GITHUB_OUTPUT"
+          echo "tier=$TIER"     >> "$GITHUB_OUTPUT"
+          echo "buildType=$BUILD_TYPE" >> "$GITHUB_OUTPUT"
+
+          echo "── Classification ──"
+          echo "  Environment : $ENV"
+          echo "  Tier        : $TIER"
+          echo "  Build Type  : $BUILD_TYPE"
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Build variant
+        env:
+          # ── COMMON (always) ──────────────────────────────────────
+          ANALYTICS_SDK_KEY: ${{ secrets.ANALYTICS_SDK_KEY }}
+
+          # ── ENVIRONMENT-SPECIFIC (all three — Gradle configures ──
+          # every flavor at configuration time, regardless of which
+          # variant you're building)
+          BACKEND_TOKEN_QA:      ${{ secrets.BACKEND_TOKEN_QA }}
+          BACKEND_TOKEN_STAGING: ${{ secrets.BACKEND_TOKEN_STAGING }}
+          BACKEND_TOKEN_PROD:    ${{ secrets.BACKEND_TOKEN_PROD }}
+
+          # ── TIER-SPECIFIC (both — same reason as above) ──────────
+          AD_SDK_KEY_FREE: ${{ secrets.AD_SDK_KEY_FREE }}
+          AD_SDK_KEY_PAID: ${{ secrets.AD_SDK_KEY_PAID }}
+
+          # ── RELEASE-ONLY (signing — only when buildType=release) ─
+          # These are the one category that IS truly conditional:
+          # signingConfigs uses resolveSecretOrNull, so empty is OK.
+          RELEASE_SIGNING_STORE_FILE:     ${{ steps.classify.outputs.buildType == 'release' && secrets.RELEASE_SIGNING_STORE_FILE     || '' }}
+          RELEASE_SIGNING_STORE_PASSWORD: ${{ steps.classify.outputs.buildType == 'release' && secrets.RELEASE_SIGNING_STORE_PASSWORD || '' }}
+          RELEASE_SIGNING_KEY_ALIAS:      ${{ steps.classify.outputs.buildType == 'release' && secrets.RELEASE_SIGNING_KEY_ALIAS      || '' }}
+          RELEASE_SIGNING_KEY_PASSWORD:   ${{ steps.classify.outputs.buildType == 'release' && secrets.RELEASE_SIGNING_KEY_PASSWORD   || '' }}
+        run: |
+          chmod +x ./gradlew
+          VARIANT="${{ inputs.variant }}"
+          TASK_NAME="assemble${VARIANT^}"
+          echo "Building: ./gradlew $TASK_NAME"
+          echo "  Secrets injected for: env=${{ steps.classify.outputs.env }}, tier=${{ steps.classify.outputs.tier }}, buildType=${{ steps.classify.outputs.buildType }}"
+          ./gradlew "$TASK_NAME"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ inputs.variant }}-apk
+          path: app/build/outputs/apk/**/*.apk
+
+
+

@@ -54,6 +54,23 @@ val versionNameFromGit = when {
 
 val versionCodeFromGit = baseVersionCode + commitsSinceTag
 
+// ── Secret resolution ──────────────────────────────────────────────────────
+// Two-tier lookup: env var (CI) → local.properties (local dev) → fail-fast error.
+// Blank env vars (e.g. '') are treated as absent — CI intentionally sets
+// release-only vars to '' for debug builds.
+val localProps = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) load(file.inputStream())
+}
+
+fun resolveSecretOrNull(name: String): String? =
+    System.getenv(name)?.takeIf { it.isNotBlank() }
+        ?: localProps.getProperty(name)?.takeIf { it.isNotBlank() }
+
+fun resolveSecret(name: String): String =
+    resolveSecretOrNull(name)
+        ?: error("Missing secret: $name — add it to local.properties or set it as an env var.")
+
 android {
     namespace = "com.codetutor.varientdemo"
     compileSdk = 36
@@ -68,6 +85,9 @@ android {
         versionName = versionNameFromGit
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // ── COMMON secret — same for every variant ─────────────────
+        buildConfigField("String", "ANALYTICS_SDK_KEY", "\"${resolveSecret("ANALYTICS_SDK_KEY")}\"")
     }
 
     sourceSets {
@@ -79,6 +99,24 @@ android {
         }
     }
 
+    // ── RELEASE-ONLY signing config ───────────────────────────────────────
+    // This block runs at Gradle CONFIGURATION time for ALL variants.
+    // For debug builds (locally or on CI) the signing secrets may be absent,
+    // so we use resolveSecretOrNull and skip configuration when missing.
+    // For release builds the secrets MUST be present — the release buildType
+    // references this config, and Gradle will fail at signing time if empty.
+    signingConfigs {
+        create("release") {
+            val storeFilePath = resolveSecretOrNull("RELEASE_SIGNING_STORE_FILE")
+            if (storeFilePath != null) {
+                storeFile = file(storeFilePath)
+                storePassword = resolveSecretOrNull("RELEASE_SIGNING_STORE_PASSWORD") ?: ""
+                keyAlias = resolveSecretOrNull("RELEASE_SIGNING_KEY_ALIAS") ?: ""
+                keyPassword = resolveSecretOrNull("RELEASE_SIGNING_KEY_PASSWORD") ?: ""
+            }
+        }
+    }
+
     buildTypes {
 
         debug {
@@ -86,12 +124,13 @@ android {
             applicationIdSuffix=".debug"
             versionNameSuffix="-debug"
             isMinifyEnabled = false
+            // Debug uses the auto-generated debug keystore — no secrets needed
         }
 
         release {
             //manifestPlaceholders ["appLabel"] = "Varient Demo"
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -99,12 +138,39 @@ android {
         }
     }
 
+    // ❌ THE NAÏVE APPROACH — DO NOT DO THIS
+    // If you create one secret per variant you end up with:
+    //
+    //   BACKEND_TOKEN_QA_FREE_DEBUG    = "..."
+    //   BACKEND_TOKEN_QA_FREE_RELEASE  = "..."
+    //   BACKEND_TOKEN_QA_PAID_DEBUG    = "..."
+    //   BACKEND_TOKEN_QA_PAID_RELEASE  = "..."
+    //   BACKEND_TOKEN_STAGING_FREE_DEBUG   = "..."
+    //   BACKEND_TOKEN_STAGING_FREE_RELEASE = "..."
+    //   BACKEND_TOKEN_STAGING_PAID_DEBUG   = "..."
+    //   BACKEND_TOKEN_STAGING_PAID_RELEASE = "..."
+    //   BACKEND_TOKEN_PROD_FREE_DEBUG  = "..."
+    //   BACKEND_TOKEN_PROD_FREE_RELEASE= "..."
+    //   BACKEND_TOKEN_PROD_PAID_DEBUG  = "..."
+    //   BACKEND_TOKEN_PROD_PAID_RELEASE= "..."
+    //
+    // That's 12 secrets — just for ONE key. Now multiply by every secret
+    // your app needs (ad SDK key, analytics key, signing creds…).
+    // The workflow YAML becomes a giant if-else matrix. Copy-paste Gradle logic
+    // everywhere. It collapses fast — not because it's technically wrong,
+    // but because no one on the team can maintain it six months later.
+    //
+    // The real question: what ACTUALLY needs to vary, and what can stay common?
+    // ────────────────────────────────────────────────────────────────────────
+
     productFlavors {
         create("qa"){
             dimension="env"
             applicationIdSuffix=".qa"
             versionNameSuffix="-qa"
             buildConfigField("String","BASE_URL","\"https://qa.api.example.com\"")
+            // ── ENVIRONMENT-SPECIFIC secret ────────────────────────
+            buildConfigField("String", "BACKEND_TOKEN", "\"${resolveSecret("BACKEND_TOKEN_QA")}\"")
         }
 
         create("staging"){
@@ -112,11 +178,15 @@ android {
             applicationIdSuffix=".staging"
             versionNameSuffix="-staging"
             buildConfigField("String","BASE_URL","\"https://staging.api.example.com\"")
+            // ── ENVIRONMENT-SPECIFIC secret ────────────────────────
+            buildConfigField("String", "BACKEND_TOKEN", "\"${resolveSecret("BACKEND_TOKEN_STAGING")}\"")
         }
 
         create("prod"){
             dimension="env"
             buildConfigField("String","BASE_URL","\"https://api.example.com\"")
+            // ── ENVIRONMENT-SPECIFIC secret ────────────────────────
+            buildConfigField("String", "BACKEND_TOKEN", "\"${resolveSecret("BACKEND_TOKEN_PROD")}\"")
         }
 
         create("free"){
@@ -124,6 +194,8 @@ android {
             applicationIdSuffix=".free"
             versionNameSuffix="-free"
             buildConfigField("Boolean","IS_PAID","false")
+            // ── TIER-SPECIFIC secret ───────────────────────────────
+            buildConfigField("String", "AD_SDK_KEY", "\"${resolveSecret("AD_SDK_KEY_FREE")}\"")
         }
 
         create("paid"){
@@ -131,6 +203,8 @@ android {
             applicationIdSuffix=".paid"
             versionNameSuffix="-paid"
             buildConfigField("Boolean","IS_PAID","true")
+            // ── TIER-SPECIFIC secret ───────────────────────────────
+            buildConfigField("String", "AD_SDK_KEY", "\"${resolveSecret("AD_SDK_KEY_PAID")}\"")
         }
 
         getByName("free"){
@@ -186,7 +260,12 @@ dependencies {
     "freeImplementation"(project(":ads"))
 }
 
-/*
+// ── Variant filter ─────────────────────────────────────────────────────
+// Only build the combinations that make sense for our workflow:
+//   QA        → debug only   (internal testing, no release signing needed)
+//   Staging   → debug only   (integration testing)
+//   Prod      → release only (what ships to users)
+// This reduces 12 variants to 6.
 extensions.configure<AndroidComponentsExtension<*, *, *>>("androidComponents") {
     beforeVariants { variantBuilder ->
         val flavors = variantBuilder.productFlavors.toMap()
@@ -194,29 +273,23 @@ extensions.configure<AndroidComponentsExtension<*, *, *>>("androidComponents") {
         val tier = flavors["tier"]
         val buildType = variantBuilder.buildType
 
-        //Fine the combinations to keep
-
         val allowedVariants = setOf(
-            //QA - Only Debug builds
+            // QA — only debug builds
             Triple("qa", "free", "debug"),
             Triple("qa", "paid", "debug"),
 
-            //Staging - both Debug and Release
+            // Staging — only debug builds
             Triple("staging", "free", "debug"),
             Triple("staging", "paid", "debug"),
-            //Triple("staging", "free", "release"),
-            //Triple("staging", "paid", "release"),
 
-            //Prod - Only release builds
+            // Prod — only release builds
             Triple("prod", "free", "release"),
             Triple("prod", "paid", "release")
         )
 
-        //Disable variants if not allowed in the allowedVariants list
-        val currentVariant = Triple(env, tier,buildType)
-        if(currentVariant !in allowedVariants) {
+        val currentVariant = Triple(env, tier, buildType)
+        if (currentVariant !in allowedVariants) {
             variantBuilder.enable = false
         }
-
     }
-}*/
+}

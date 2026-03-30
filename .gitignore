@@ -25,6 +25,8 @@ render.experimental.xml
 # Keystore files
 *.jks
 *.keystore
+# Exception: demo keystore for the secrets video (throwaway, not real credentials)
+!app/demo-release.jks
 
 # Google Services (e.g. APIs or Firebase)
 google-services.json
