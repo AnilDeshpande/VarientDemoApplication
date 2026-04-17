@@ -54,6 +54,20 @@ val versionNameFromGit = when {
 
 val versionCodeFromGit = baseVersionCode + commitsSinceTag
 
+val localProps = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) load(file.inputStream())
+}
+
+fun resolveSecretOrNull(name: String): String? =
+    System.getenv(name)?.takeIf { it.isNotBlank() }
+        ?: localProps.getProperty(name)?.takeIf { it.isNotBlank() }
+
+fun resolveSecret(name: String): String =
+    resolveSecretOrNull(name)
+        ?: error("Missing secret: $name — add it to local.properties or set it as an env var.")
+
+
 android {
     namespace = "com.codetutor.varientdemo"
     compileSdk = 36
@@ -68,6 +82,19 @@ android {
         versionName = versionNameFromGit
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "ANALYTICS_SDK_KEY", "\"${resolveSecret("ANALYTICS_SDK_KEY")}\"")
+    }
+
+    signingConfigs {
+        create("release") {
+            val storeFilePath = resolveSecretOrNull("RELEASE_SIGNING_STORE_FILE")
+            if (storeFilePath != null) {
+                storeFile = file(storeFilePath)
+                storePassword = resolveSecretOrNull("RELEASE_SIGNING_STORE_PASSWORD") ?: ""
+                keyAlias     = resolveSecretOrNull("RELEASE_SIGNING_KEY_ALIAS") ?: ""
+                keyPassword  = resolveSecretOrNull("RELEASE_SIGNING_KEY_PASSWORD") ?: ""
+            }
+        }
     }
 
     sourceSets {
@@ -91,7 +118,7 @@ android {
         release {
             //manifestPlaceholders ["appLabel"] = "Varient Demo"
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -105,6 +132,7 @@ android {
             applicationIdSuffix=".qa"
             versionNameSuffix="-qa"
             buildConfigField("String","BASE_URL","\"https://qa.api.example.com\"")
+            buildConfigField("String", "BACKEND_TOKEN", "\"${resolveSecret("BACKEND_TOKEN_QA")}\"")
         }
 
         create("staging"){
@@ -112,11 +140,13 @@ android {
             applicationIdSuffix=".staging"
             versionNameSuffix="-staging"
             buildConfigField("String","BASE_URL","\"https://staging.api.example.com\"")
+            buildConfigField("String", "BACKEND_TOKEN", "\"${resolveSecret("BACKEND_TOKEN_STAGING")}\"")
         }
 
         create("prod"){
             dimension="env"
             buildConfigField("String","BASE_URL","\"https://api.example.com\"")
+            buildConfigField("String", "BACKEND_TOKEN", "\"${resolveSecret("BACKEND_TOKEN_PROD")}\"")
         }
 
         create("free"){
@@ -124,6 +154,7 @@ android {
             applicationIdSuffix=".free"
             versionNameSuffix="-free"
             buildConfigField("Boolean","IS_PAID","false")
+            buildConfigField("String", "AD_SDK_KEY", "\"${resolveSecret("AD_SDK_KEY_FREE")}\"")
         }
 
         create("paid"){
@@ -131,6 +162,7 @@ android {
             applicationIdSuffix=".paid"
             versionNameSuffix="-paid"
             buildConfigField("Boolean","IS_PAID","true")
+            buildConfigField("String", "AD_SDK_KEY", "\"${resolveSecret("AD_SDK_KEY_PAID")}\"")
         }
 
         getByName("free"){
