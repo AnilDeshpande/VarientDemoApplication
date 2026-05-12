@@ -1,4 +1,4 @@
-name: Android CI
+name: Android Manual Variant Build
 
 on:
   workflow_dispatch:
@@ -8,17 +8,17 @@ on:
         required: true
         type: string
         default: 'live-coding'
-        variant:
-          description: 'Variant to build'
-          required: true
-          type: choice
-          options:
-            - qaFreeDebug
-            - qaPaidDebug
-            - stagingFreeDebug
-            - stagingPaidDebug
-            - prodFreeRelease
-            - prodPaidRelease
+      variant:
+        description: 'Variant to build'
+        required: true
+        type: choice
+        options:
+          - qaFreeDebug
+          - qaPaidDebug
+          - stagingFreeDebug
+          - stagingPaidDebug
+          - prodFreeRelease
+          - prodPaidRelease
 
 jobs:
   build:
@@ -58,9 +58,11 @@ jobs:
             BUILD_TYPE="release"
           fi
           
-          echo "env=$ENV"       >> "$GITHUB_OUTPUT"
-          echo "tier=$TIER"     >> "$GITHUB_OUTPUT"
-          echo "buildType=$BUILD_TYPE" >> "$GITHUB_OUTPUT"
+          {
+            echo "env=$ENV"
+            echo "tier=$TIER"
+            echo "buildType=$BUILD_TYPE"
+          } >> "$GITHUB_OUTPUT"
           
           echo "── Classification ──"
           echo "  Environment : $ENV"
@@ -110,4 +112,3 @@ jobs:
           name: ${{ inputs.variant }}-apk
           path: app/build/outputs/apk/**/*.apk
           
-
