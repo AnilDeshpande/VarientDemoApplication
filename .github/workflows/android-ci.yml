@@ -14,7 +14,7 @@
 #
 # No giant if-else. The variant name encodes the env, tier, and buildType.
 
-name: Android CI
+name: Android Manual Variant Build
 
 on:
   workflow_dispatch:
@@ -23,7 +23,7 @@ on:
         description: 'Branch to build from'
         required: true
         type: string
-        default: 'secrets-demo-video-three'
+        default: 'live-coding'
       variant:
         description: 'Variant to build'
         required: true
@@ -39,7 +39,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -51,7 +50,7 @@ jobs:
         run: |
           VARIANT="${{ inputs.variant }}"
           echo "variant=$VARIANT"
-
+          
           # Extract environment (first segment: qa, staging, or prod)
           if [[ "$VARIANT" == qa* ]]; then
             ENV="QA"
@@ -60,25 +59,27 @@ jobs:
           elif [[ "$VARIANT" == prod* ]]; then
             ENV="PROD"
           fi
-
+          
           # Extract tier (middle segment: Free or Paid)
           if [[ "$VARIANT" == *Free* ]]; then
             TIER="FREE"
           elif [[ "$VARIANT" == *Paid* ]]; then
             TIER="PAID"
           fi
-
+          
           # Extract build type (last segment: Debug or Release)
           if [[ "$VARIANT" == *Debug ]]; then
             BUILD_TYPE="debug"
           elif [[ "$VARIANT" == *Release ]]; then
             BUILD_TYPE="release"
           fi
-
-          echo "env=$ENV"       >> "$GITHUB_OUTPUT"
-          echo "tier=$TIER"     >> "$GITHUB_OUTPUT"
-          echo "buildType=$BUILD_TYPE" >> "$GITHUB_OUTPUT"
-
+          
+          {
+            echo "env=$ENV"
+            echo "tier=$TIER"
+            echo "buildType=$BUILD_TYPE"
+          } >> "$GITHUB_OUTPUT"
+          
           echo "── Classification ──"
           echo "  Environment : $ENV"
           echo "  Tier        : $TIER"
@@ -98,9 +99,9 @@ jobs:
           # ── ENVIRONMENT-SPECIFIC (all three — Gradle configures ──
           # every flavor at configuration time, regardless of which
           # variant you're building)
-          BACKEND_TOKEN_QA:      ${{ secrets.BACKEND_TOKEN_QA }}
+          BACKEND_TOKEN_QA: ${{ secrets.BACKEND_TOKEN_QA }}
           BACKEND_TOKEN_STAGING: ${{ secrets.BACKEND_TOKEN_STAGING }}
-          BACKEND_TOKEN_PROD:    ${{ secrets.BACKEND_TOKEN_PROD }}
+          BACKEND_TOKEN_PROD: ${{ secrets.BACKEND_TOKEN_PROD }}
 
           # ── TIER-SPECIFIC (both — same reason as above) ──────────
           AD_SDK_KEY_FREE: ${{ secrets.AD_SDK_KEY_FREE }}
@@ -126,6 +127,3 @@ jobs:
         with:
           name: ${{ inputs.variant }}-apk
           path: app/build/outputs/apk/**/*.apk
-
-
-
