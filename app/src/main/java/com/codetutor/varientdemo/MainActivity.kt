@@ -74,6 +74,10 @@ fun ConfigScreen(){
             KeyValue("APPLICATION_ID", BuildConfig.APPLICATION_ID)
             KeyValue("VERSION_NAME", BuildConfig.VERSION_NAME ?: "—")
             KeyValue("DEBUG flag", BuildConfig.DEBUG.toString())
+
+            // New for flavors
+            KeyValue("FLAVOR (env)", BuildConfig.FLAVOR.ifBlank { "—" })
+            KeyValue("BUILD_TYPE", BuildConfig.BUILD_TYPE)
             KeyValue("BASE_URL", BuildConfig.BASE_URL)
 
             if (BuildConfig.DEBUG) DebugBanner()
