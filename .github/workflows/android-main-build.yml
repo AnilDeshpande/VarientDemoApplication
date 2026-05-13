@@ -1,0 +1,45 @@
+name: Android Main Build
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration-build:
+    name: Main branch confidence build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Build representative debug variants
+        env:
+          # Main builds prove integration after merge.
+          # Release signing still belongs in the release workflow.
+          ANALYTICS_SDK_KEY: main-demo-analytics-key
+          BACKEND_TOKEN_QA: main-demo-qa-token
+          BACKEND_TOKEN_STAGING: main-demo-staging-token
+          BACKEND_TOKEN_PROD: main-demo-prod-token
+          AD_SDK_KEY_FREE: main-demo-free-ad-key
+          AD_SDK_KEY_PAID: main-demo-paid-ad-key
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleQaFreeDebug assembleStagingPaidDebug
+
+      - name: Upload debug APKs
+        uses: actions/upload-artifact@v5
+        with:
+          name: main-debug-apks
+          path: app/build/outputs/apk/**/*.apk

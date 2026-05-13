@@ -1,0 +1,56 @@
+name: Android Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: 'Release variant to build'
+        required: true
+        type: choice
+        options:
+          - prodFreeRelease
+          - prodPaidRelease
+
+permissions:
+  contents: read
+
+jobs:
+  signed-release:
+    name: Trusted release build
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Build signed release variant
+        env:
+          ANALYTICS_SDK_KEY: ${{ secrets.ANALYTICS_SDK_KEY }}
+          BACKEND_TOKEN_QA: ${{ secrets.BACKEND_TOKEN_QA }}
+          BACKEND_TOKEN_STAGING: ${{ secrets.BACKEND_TOKEN_STAGING }}
+          BACKEND_TOKEN_PROD: ${{ secrets.BACKEND_TOKEN_PROD }}
+          AD_SDK_KEY_FREE: ${{ secrets.AD_SDK_KEY_FREE }}
+          AD_SDK_KEY_PAID: ${{ secrets.AD_SDK_KEY_PAID }}
+          RELEASE_SIGNING_STORE_FILE: ${{ secrets.RELEASE_SIGNING_STORE_FILE }}
+          RELEASE_SIGNING_STORE_PASSWORD: ${{ secrets.RELEASE_SIGNING_STORE_PASSWORD }}
+          RELEASE_SIGNING_KEY_ALIAS: ${{ secrets.RELEASE_SIGNING_KEY_ALIAS }}
+          RELEASE_SIGNING_KEY_PASSWORD: ${{ secrets.RELEASE_SIGNING_KEY_PASSWORD }}
+        run: |
+          chmod +x ./gradlew
+          VARIANT="${{ inputs.variant }}"
+          TASK_NAME="assemble${VARIANT^}"
+          echo "Building trusted release artifact: ./gradlew $TASK_NAME"
+          ./gradlew "$TASK_NAME"
+
+      - name: Upload signed release APK
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ inputs.variant }}-signed-apk
+          path: app/build/outputs/apk/**/*.apk
