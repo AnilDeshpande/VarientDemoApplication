@@ -80,6 +80,15 @@ fun ConfigScreen(){
             KeyValue("BUILD_TYPE", BuildConfig.BUILD_TYPE)
             KeyValue("BASE_URL", BuildConfig.BASE_URL)
 
+            //KeyValue("TIER_NAME", BuildConfig.TIER_NAME)
+            KeyValue("SHOW_ADS", BuildConfig.SHOW_ADS.toString())
+
+            if (BuildConfig.SHOW_ADS) {
+                Surface(tonalElevation = 2.dp) {
+                    Text("[Ad placeholder] — visible in FREE", Modifier.padding(12.dp))
+                }
+            }
+
             if (BuildConfig.DEBUG) DebugBanner()
             Text("Diagnostics", style = MaterialTheme.typography.titleMedium)
             DiagnosticsCard()
